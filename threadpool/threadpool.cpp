@@ -1,15 +1,16 @@
 #include "threadpool.hpp"
-
+#define MIN_WAIT_TASK_NUM 10            /*如果queue_size > MIN_WAIT_TASK_NUM 添加新的线程到线程池*/ 
+#define DEFAULT_THREAD_VARY 10          /*每次创建和销毁线程的个数*/
 threadpool_t* threadpool_create(int min_thr_num, int max_thr_num, int queue_max_size)
 {
     int i;
     threadpool_t *pool = nullptr;
     do
     {
-        pool = (threadpool_t *)malloc(sizeof(threadpool_t))
+        pool = (threadpool_t *)malloc(sizeof(threadpool_t));
         if (pool == nullptr)
         {
-            cout << "Wrong alloc to pool" << endl;
+            std::cout << "Wrong alloc to pool" << std::endl;
             break;
         }
         pool->min_thr_num = min_thr_num;
@@ -33,7 +34,7 @@ threadpool_t* threadpool_create(int min_thr_num, int max_thr_num, int queue_max_
         pthread_cond_init(&pool->queue_not_full, NULL) != 0|| 
         pthread_cond_init(&pool->queue_not_empty, NULL) != 0)
         {
-            cout << "init fail" << endl;
+            std::cout << "init fail" << std::endl;
             break;
         }
     /* 创建子线程 */
@@ -41,7 +42,7 @@ threadpool_t* threadpool_create(int min_thr_num, int max_thr_num, int queue_max_
     {
         /* pool 指向当前线程池 */
         pthread_create(&pool->threads[i], NULL, threadpool_thread, (void*) pool);
-        cout << "Start thread " << pool->threads[i] << endl;
+        std::cout << "Start thread " << pool->threads[i] << std::endl;
     }
     pthread_create(&pool->adjust_tid, NULL, adjust_thread, (void *)pool);
 
@@ -96,7 +97,7 @@ void* threadpool_thread(void* arg)
         /* queue_size == 0时，说明没有任务，则调用wait阻塞在条件变量上 */
         while ((tpool->queue_size == 0) && (!tpool->shutdown))
         {
-            cout << "Thread 0x" << pthread_self() << " is waiting" << endl;
+            std::cout << "Thread 0x" << pthread_self() << " is waiting" << std::endl;
             pthread_cond_wait(&tpool->queue_not_empty, &tpool->lock);
             if (tpool->wait_exit_thr_num > 0) {
                 tpool->wait_exit_thr_num--;
@@ -104,7 +105,7 @@ void* threadpool_thread(void* arg)
                 /*如果线程池里线程个数大于最小值时可以结束当前线程*/
                 if (tpool->live_thr_num > tpool->min_thr_num) {
                     // printf("thread 0x%x is exiting\n", (unsigned int)pthread_self());
-                    cout << "thread " << pthread_self() << "is exiting" << endl;
+                    std::cout << "thread " << pthread_self() << "is exiting" << std::endl;
                     tpool->live_thr_num--;
                     pthread_mutex_unlock(&(tpool->lock));
 
@@ -115,12 +116,12 @@ void* threadpool_thread(void* arg)
         /*如果指定了true，要关闭线程池里的每个线程，自行退出处理---销毁线程池*/
         if (tpool->shutdown) {
             pthread_mutex_unlock(&(tpool->lock));
-            cout << "thread " << pthread_self() << "is exiting" << endl;
+            std::cout << "thread " << pthread_self() << "is exiting" << std::endl;
             pthread_detach(pthread_self());
             pthread_exit(NULL);     /* 线程自行结束 */
         }
-        task.function = tpool->task_queue[tpool->task_front].function;
-        task.arg = tpool->task_queue[tpool->task_front].arg;
+        task.function = tpool->task_queue[tpool->queue_front].function;
+        task.arg = tpool->task_queue[tpool->queue_front].arg;
 
         /* 出队，模拟环形队列 */
         tpool->queue_front = (tpool->queue_front + 1) % tpool->queue_max_size;
@@ -130,14 +131,14 @@ void* threadpool_thread(void* arg)
         pthread_mutex_unlock(&tpool->lock);
 
         /* 执行任务 */
-        cout << "thread " << pthread_self() << " is working" << endl;
+        std::cout << "thread " << pthread_self() << " is working" << std::endl;
         pthread_mutex_lock(&tpool->thread_counter);
         tpool->busy_thr_num++;
         pthread_mutex_unlock(&tpool->thread_counter);
         *(task.function)(task.arg);
 
         /* 结束任务处理 */
-        cout << "thread " << pthread_self() << " end working" << endl;
+        std::cout << "thread " << pthread_self() << " end working" << std::endl;
         pthread_mutex_lock(&tpool->thread_counter);
         tpool->busy_thr_num--;
         pthread_mutex_unlock(&tpool->thread_counter);
@@ -152,7 +153,7 @@ void *adjust_thread(void *threadpool)
     threadpool_t *pool = (threadpool_t *)threadpool;
     while (!pool->shutdown) {
 
-        sleep(DEFAULT_TIME);                                    /*定时 对线程池管理*/
+        sleep(10);                                    /*定时 对线程池管理*/
 
         pthread_mutex_lock(&(pool->lock));
         int queue_size = pool->queue_size;                      /* 关注 任务数 */
@@ -201,9 +202,9 @@ void *adjust_thread(void *threadpool)
 
 void *process(void *arg)
 {
-    cout << "thread 0x" << pthread_self() << "working on task " << (int)arg;
+    std::cout << "thread 0x" << pthread_self() << "working on task ";
     sleep(1);                           //模拟 小---大写
-    cout << "task" << (int) arg  << "is end" << endl;
+    std::cout << "task" <<  pthread_self() << " is end" << std::endl;
     return nullptr;
 }
 
@@ -229,4 +230,36 @@ int threadpool_free(threadpool_t *pool)
     pool = NULL;
 
     return 0;
+}
+
+int threadpool_destroy(threadpool_t *pool)
+{
+    int i;
+    if (pool == NULL) {
+        return -1;
+    }
+    pool->shutdown = true;
+
+    /*先销毁管理线程*/
+    pthread_join(pool->adjust_tid, NULL);
+
+    for (i = 0; i < pool->live_thr_num; i++) {
+        /*通知所有的空闲线程*/
+        pthread_cond_broadcast(&(pool->queue_not_empty));
+    }
+    for (i = 0; i < pool->live_thr_num; i++) {
+        pthread_join(pool->threads[i], NULL);
+    }
+    threadpool_free(pool);
+
+    return 0;
+}
+
+int is_thread_alive(pthread_t tid)
+{
+    int kill_rc = pthread_kill(tid, 0);     //发0号信号，测试线程是否存活
+    if (kill_rc == ESRCH) {
+        return false;
+    }
+    return true;
 }
