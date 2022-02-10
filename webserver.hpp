@@ -11,9 +11,11 @@
 #include <stdlib.h>
 #include <cassert>
 #include <sys/epoll.h>
+#include <strings.h>
+#include <ctype.h>
 
 const int MAX_FD = 65536;           //最大文件描述符
-const int MAX_EVENT_NUMBER = 10000; //最大事件数
+const int MAX_EVENTS_NUM = 10000; //最大事件数
 const int TIMESLOT = 5;             //最小超时单位
 
 class webserver
@@ -23,6 +25,7 @@ public:
     int m_port;
     char* m_root;
     int m_epollfd;
+    char buffer[1024];
 
     // 数据库相关
 
@@ -40,7 +43,9 @@ public:
     void init(int port);
     void eventLoop();   /* epoll 主要循环 */
     void eventListen(); /* 处理监听事件 */
-    void dealWithRead();/* 处理读事件 */
+    void dealWithRead(int sockfd); /* 处理读事件 */
+    void dealWithWrite(int sockfd); /* 处理写事件 */
+    bool dealWithClientData(); /* 处理监听事件 */
 };
 
 #endif
