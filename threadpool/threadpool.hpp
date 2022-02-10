@@ -35,6 +35,7 @@ class threadpool_t {
     int queue_max_size;
 
     bool shutdown; /* 标志位，线程池使用状态 */
+    bool test;
 };
 
 
