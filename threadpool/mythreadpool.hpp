@@ -34,7 +34,7 @@ class threadpool
 };
 
 template <typename T>
-threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int thread_number, int max_requests) : m_actor_model(actor_model),m_thread_number(thread_number), m_max_requests(max_requests), m_threads(NULL),m_connPool(connPool)
+threadpool<T>::threadpool(int thread_number, int max_requests) : m_thread_number(thread_number), m_max_requests(max_requests), m_threads(NULL)
 {
     if (thread_number <= 0 || max_requests <= 0)
     {
@@ -67,6 +67,15 @@ threadpool<T>::~threadpool()
     delete[] m_threads;
 }
 
+/**
+ * @brief 
+ * 添加任务进入任务队列
+ * @tparam T 
+ * @param request http_conn类的请求
+ * @param state 0指读事件，1指写事件
+ * @return true 正常添加
+ * @return false 添加错误
+ */
 template <typename T>
 bool threadpool<T>::append(T * request, int state)
 {
@@ -84,6 +93,9 @@ bool threadpool<T>::append(T * request, int state)
     return true;
 }
 
+/**
+ * @deprecated
+ */
 template <typename T>
 bool threadpool<T>::append_p(T *request)
 {
@@ -95,6 +107,7 @@ bool threadpool<T>::append_p(T *request)
     }
     m_workqueue.push_back(request);
     m_queuelocker.unlock();
+    // 通知可写
     m_queuestat.P();
     return true;
 }
@@ -145,17 +158,18 @@ void threadpool<T>::run()
         { continue; }
         /**
          * @todo 增加模型选择
-         * 
          */
 
-        /* 从连接池中取出一个数据库连接 */
-        request->mysql = m_connPool->GetConnection();
+        if (request->m_state == 0)
+        {
+            // 如果是读，调用process(模板类中的方法,这里是http类)进行处理
+            request->process();
+        }
+        else
+        {
 
-        /* process(模板类中的方法,这里是http类)进行处理 */
-        request->process();
+        }
 
-        /* 释放连接池 */
-        m_connPool->ReleaseConnection();
     }
 }
 

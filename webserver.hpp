@@ -13,6 +13,8 @@
 #include <sys/epoll.h>
 #include <strings.h>
 #include <ctype.h>
+#include "threadpool/mythreadpool.hpp"
+#include "http/http.hpp"
 
 const int MAX_FD = 65536;           //最大文件描述符
 const int MAX_EVENTS_NUM = 10000; //最大事件数
@@ -26,10 +28,12 @@ public:
     char* m_root;
     int m_epollfd;
     char buffer[1024];
+    http_conn *users; /* http连接数组指针 */
 
     // 数据库相关
 
     // 线程池相关
+    threadpool* m_pool;
 
     // epoll_events 相关
     struct epoll_event events[MAX_EVENTS_NUM];
@@ -46,6 +50,8 @@ public:
     void dealWithRead(int sockfd); /* 处理读事件 */
     void dealWithWrite(int sockfd); /* 处理写事件 */
     bool dealWithClientData(); /* 处理监听事件 */
+    void thread_pool();        /* 线程池 */
+
 };
 
 #endif

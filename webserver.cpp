@@ -11,6 +11,12 @@ void webserver::init(int port)
     m_port = port;
 }
 
+void webserver::thread_pool()
+{
+    // 初始化线程池
+    m_pool = new threadpool<http_conn>(m_connPool, m_thread_num);
+}
+
 void webserver::eventListen()
 {
     m_listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -48,6 +54,10 @@ void webserver::eventListen()
 
 void webserver::eventLoop()
 {
+    /**
+     * @todo: add timeout here
+     * 
+     */
     bool stop = false;
     while (!stop)
     {
@@ -70,39 +80,47 @@ void webserver::eventLoop()
             }
             // 如果是读事件
             /* TODO: 反应堆待实现 */
-            // else if (events[i].events & EPOLLIN)
-            // {
-            //     dealWithRead(sockfd);
-            // }
-            // else if (events[i].events & EPOLLOUT)
-            // {
-            //     dealWithWrite(sockfd);
-            // }
-            else
+            else if (events[i].events & EPOLLIN)
             {
-                int sockfd = events[i].data.fd;
-                int n = read(sockfd, buffer, sizeof(buffer));
-                if (n == 0)
-                {
-                    int res = epoll_ctl(m_epollfd, EPOLL_CTL_DEL, sockfd, NULL);
-                    assert(res != -1);
-                    close(sockfd);
-                }
-                else if (n < 0)
-                {
-                    close(sockfd);
-                    exit(1);
-                }
-                else
-                {
-                    for (int j = 0; j < n; ++j)
-                    {
-                        buffer[j] = toupper(buffer[j]);
-                    }
-                    write(sockfd, buffer, n);
-                    write(STDOUT_FILENO, buffer,n);
-                }
+                dealWithRead(sockfd);
             }
+            else if (events[i].events & EPOLLOUT)
+            {
+                dealWithWrite(sockfd);
+            }
+            // 如果有异常情况
+            // else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
+            // {
+            //     //服务器端关闭连接，移除对应的定时器
+            //     util_timer *timer = users_timer[sockfd].timer;
+            //     deal_timer(timer, sockfd);
+            // }
+            // else
+            // {
+            //     int sockfd = events[i].data.fd;
+            //     int n = read(sockfd, buffer, sizeof(buffer));
+            //     if (n == 0)
+            //     {
+            //         int res = epoll_ctl(m_epollfd, EPOLL_CTL_DEL, sockfd, NULL);
+            //         assert(res != -1);
+            //         close(sockfd);
+            //     }
+            //     else if (n < 0)
+            //     {
+            //         close(sockfd);
+            //         exit(1);
+            //     }
+            //     else
+            //     {
+            //         for (int j = 0; j < n; ++j)
+            //         {
+            //             buffer[j] = toupper(buffer[j]);
+            //         }
+            //         write(sockfd, buffer, n);
+            //         write(STDOUT_FILENO, buffer,n);
+            //     }
+            // }
+
         }
     }
     close(m_listenfd);
@@ -125,4 +143,18 @@ bool webserver::dealWithClientData()
     ev.events = EPOLLIN | EPOLLET;
     int ret = epoll_ctl(m_epollfd, EPOLL_CTL_ADD, cfd, &ev);
     assert(ret != -1);
+}
+
+void webserver::dealWithRead(int sockfd) /* 处理读事件 */
+{
+    // reactor模式
+    // 将socket可读事件放入请求队列，交给工作线程处理，0代表读事件
+    m_pool->append(users + sockfd, 0);
+}
+
+void webserver::dealWithWrite(int sockfd)
+{
+    // reactor模式
+    // 将socket可写事件放入请求队列，交给工作线程处理，1代表写事件
+    m_pool->append(users + sockfd, 1);
 }

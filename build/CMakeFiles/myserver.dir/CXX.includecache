@@ -1,0 +1,42 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/main.cpp
+webserver.hpp
+/home/ubuntu/RemoteWorking/Flee_WebServer/webserver.hpp
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/webserver.cpp
+webserver.hpp
+/home/ubuntu/RemoteWorking/Flee_WebServer/webserver.hpp
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/webserver.hpp
+sys/socket.h
+-
+netinet/in.h
+-
+arpa/inet.h
+-
+stdio.h
+-
+unistd.h
+-
+errno.h
+-
+fcntl.h
+-
+stdlib.h
+-
+cassert
+-
+sys/epoll.h
+-
+strings.h
+-
+ctype.h
+-
+
