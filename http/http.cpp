@@ -1,5 +1,6 @@
 #include "http.hpp"
 
+int http_conn::m_epollfd = -1;
 //对文件描述符设置非阻塞
 int setnonblocking(int fd)
 {
