@@ -35,6 +35,7 @@ public:
 
     // 线程池相关
     threadpool<http_conn>* m_pool;
+    int m_thread_num;
 
     // epoll_events 相关
     struct epoll_event events[MAX_EVENTS_NUM];
@@ -43,7 +44,7 @@ public:
 
     
 public:
-    webserver() = default;
+    webserver();
     ~webserver();
     void init(int port);
     void eventLoop();   /* epoll 主要循环 */

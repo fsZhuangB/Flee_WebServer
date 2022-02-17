@@ -1,9 +1,17 @@
 #include "webserver.hpp"
 
+webserver::webserver()
+{
+    //http_conn类对象
+    users = new http_conn[MAX_FD];
+}
+
 webserver::~webserver()
 {
     close(m_epollfd);
     close(m_listenfd);
+    delete[] users;
+    delete m_pool;
 }
 
 void webserver::init(int port)
