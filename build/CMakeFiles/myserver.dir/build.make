@@ -116,6 +116,8 @@ myserver_EXTERNAL_OBJECTS =
 myserver: CMakeFiles/myserver.dir/main.cpp.o
 myserver: CMakeFiles/myserver.dir/webserver.cpp.o
 myserver: CMakeFiles/myserver.dir/build.make
+myserver: http/libhttp.a
+myserver: threadpool/libthreadpool.a
 myserver: CMakeFiles/myserver.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/ubuntu/RemoteWorking/Flee_WebServer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable myserver"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/myserver.dir/link.txt --verbose=$(VERBOSE)

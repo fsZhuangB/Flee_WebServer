@@ -14,7 +14,7 @@ void webserver::init(int port)
 void webserver::thread_pool()
 {
     // 初始化线程池
-    m_pool = new threadpool<http_conn>(m_connPool, m_thread_num);
+    m_pool = new threadpool<http_conn>();
 }
 
 void webserver::eventListen()
@@ -48,6 +48,9 @@ void webserver::eventListen()
     tempEvents.data.fd = m_listenfd;
     ret = epoll_ctl(m_epollfd, EPOLL_CTL_ADD, m_listenfd, &tempEvents);
     assert(ret != -1);
+
+    // 初始化epollfd
+    http_conn::m_epollfd = m_epollfd;
 
     // 设置listenfd 文件描述符为非阻塞
 }
@@ -134,15 +137,17 @@ bool webserver::dealWithClientData()
     assert(cfd != -1);
 
     // 设置cfd非阻塞
-    int flag = fcntl(cfd, F_GETFL);
-    flag |= O_NONBLOCK;
-    fcntl(cfd, F_SETFL, flag);
+    setnonblocking(cfd);
 
-    struct epoll_event ev;
-    ev.data.fd = cfd;
-    ev.events = EPOLLIN | EPOLLET;
-    int ret = epoll_ctl(m_epollfd, EPOLL_CTL_ADD, cfd, &ev);
-    assert(ret != -1);
+    // struct epoll_event ev;
+    // ev.data.fd = cfd;
+    // ev.events = EPOLLIN | EPOLLET;
+    // int ret = epoll_ctl(m_epollfd, EPOLL_CTL_ADD, cfd, &ev);
+    // 加入到红黑树上
+    addfd(m_epollfd, cfd, true);
+
+    // 为该次连接（用户）初始化
+    users[cfd].init(cfd, address);
 }
 
 void webserver::dealWithRead(int sockfd) /* 处理读事件 */

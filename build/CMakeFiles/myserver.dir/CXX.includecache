@@ -6,9 +6,49 @@
 
 #IncludeRegexTransform: 
 
+/home/ubuntu/RemoteWorking/Flee_WebServer/http/http.hpp
+sys/epoll.h
+-
+unistd.h
+-
+fcntl.h
+-
+sys/socket.h
+-
+netinet/in.h
+-
+arpa/inet.h
+-
+string.h
+-
+iostream
+-
+../lock/locker.h
+/home/ubuntu/RemoteWorking/Flee_WebServer/lock/locker.h
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/lock/locker.h
+exception
+-
+pthread.h
+-
+semaphore.h
+-
+
 /home/ubuntu/RemoteWorking/Flee_WebServer/main.cpp
 webserver.hpp
 /home/ubuntu/RemoteWorking/Flee_WebServer/webserver.hpp
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/threadpool/mythreadpool.hpp
+list
+-
+cstdio
+-
+exception
+-
+pthread.h
+-
+../lock/locker.h
+/home/ubuntu/RemoteWorking/Flee_WebServer/lock/locker.h
 
 /home/ubuntu/RemoteWorking/Flee_WebServer/webserver.cpp
 webserver.hpp
@@ -39,4 +79,8 @@ strings.h
 -
 ctype.h
 -
+threadpool/mythreadpool.hpp
+/home/ubuntu/RemoteWorking/Flee_WebServer/threadpool/mythreadpool.hpp
+http/http.hpp
+/home/ubuntu/RemoteWorking/Flee_WebServer/http/http.hpp
 

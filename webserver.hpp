@@ -13,6 +13,7 @@
 #include <sys/epoll.h>
 #include <strings.h>
 #include <ctype.h>
+
 #include "threadpool/mythreadpool.hpp"
 #include "http/http.hpp"
 
@@ -33,7 +34,7 @@ public:
     // 数据库相关
 
     // 线程池相关
-    threadpool* m_pool;
+    threadpool<http_conn>* m_pool;
 
     // epoll_events 相关
     struct epoll_event events[MAX_EVENTS_NUM];
@@ -51,7 +52,6 @@ public:
     void dealWithWrite(int sockfd); /* 处理写事件 */
     bool dealWithClientData(); /* 处理监听事件 */
     void thread_pool();        /* 线程池 */
-
 };
 
 #endif

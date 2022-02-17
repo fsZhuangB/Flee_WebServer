@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/lock/locker.h
+exception
+-
+pthread.h
+-
+semaphore.h
+-
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/threadpool/mythreadpool.cpp
+mythreadpool.hpp
+/home/ubuntu/RemoteWorking/Flee_WebServer/threadpool/mythreadpool.hpp
+
+/home/ubuntu/RemoteWorking/Flee_WebServer/threadpool/mythreadpool.hpp
+list
+-
+cstdio
+-
+exception
+-
+pthread.h
+-
+../lock/locker.h
+/home/ubuntu/RemoteWorking/Flee_WebServer/lock/locker.h
+

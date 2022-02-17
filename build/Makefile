@@ -123,6 +123,32 @@ myserver/fast:
 	$(MAKE) -f CMakeFiles/myserver.dir/build.make CMakeFiles/myserver.dir/build
 .PHONY : myserver/fast
 
+#=============================================================================
+# Target rules for targets named http
+
+# Build rule for target.
+http: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 http
+.PHONY : http
+
+# fast build rule for target.
+http/fast:
+	$(MAKE) -f http/CMakeFiles/http.dir/build.make http/CMakeFiles/http.dir/build
+.PHONY : http/fast
+
+#=============================================================================
+# Target rules for targets named threadpool
+
+# Build rule for target.
+threadpool: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 threadpool
+.PHONY : threadpool
+
+# fast build rule for target.
+threadpool/fast:
+	$(MAKE) -f threadpool/CMakeFiles/threadpool.dir/build.make threadpool/CMakeFiles/threadpool.dir/build
+.PHONY : threadpool/fast
+
 main.o: main.cpp.o
 
 .PHONY : main.o
@@ -186,6 +212,8 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... myserver"
+	@echo "... http"
+	@echo "... threadpool"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"

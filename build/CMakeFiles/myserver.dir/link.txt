@@ -1,1 +1,1 @@
-/usr/bin/c++    -rdynamic CMakeFiles/myserver.dir/main.cpp.o CMakeFiles/myserver.dir/webserver.cpp.o  -o myserver 
+/usr/bin/c++    -rdynamic CMakeFiles/myserver.dir/main.cpp.o CMakeFiles/myserver.dir/webserver.cpp.o  -o myserver  -Lhttp  -Lthreadpool -Wl,-rpath,http:threadpool http/libhttp.a threadpool/libthreadpool.a 
