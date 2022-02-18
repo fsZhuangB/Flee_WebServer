@@ -51,16 +51,11 @@ void webserver::eventListen()
     assert(m_epollfd != -1);
 
     // 添加到监听队列
-    struct epoll_event tempEvents;
-    tempEvents.events = EPOLLIN | EPOLLET;
-    tempEvents.data.fd = m_listenfd;
-    ret = epoll_ctl(m_epollfd, EPOLL_CTL_ADD, m_listenfd, &tempEvents);
-    assert(ret != -1);
+    addfd(m_epollfd, m_listenfd, false);
 
     // 初始化epollfd
     http_conn::m_epollfd = m_epollfd;
 
-    // 设置listenfd 文件描述符为非阻塞
 }
 
 void webserver::eventLoop()
@@ -144,15 +139,8 @@ bool webserver::dealWithClientData()
     int cfd = accept(m_listenfd, (struct sockaddr*)&address, &client_addr_len);
     assert(cfd != -1);
 
-    // 设置cfd非阻塞
-    setnonblocking(cfd);
-
-    // struct epoll_event ev;
-    // ev.data.fd = cfd;
-    // ev.events = EPOLLIN | EPOLLET;
-    // int ret = epoll_ctl(m_epollfd, EPOLL_CTL_ADD, cfd, &ev);
     // 加入到红黑树上
-    addfd(m_epollfd, cfd, true);
+    addfd(m_epollfd, cfd, false);
 
     // 为该次连接（用户）初始化
     users[cfd].init(cfd, address);

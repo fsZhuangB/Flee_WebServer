@@ -37,7 +37,7 @@ void modfd(int epollfd, int fd, int ev)
 {
     epoll_event event;
     event.data.fd = fd;
-    event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
+    event.events = ev | EPOLLET | EPOLLRDHUP;
 
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
@@ -52,7 +52,7 @@ void http_conn::process()
     while (1)
     {
         int ret = recv(m_sockfd, m_read_buf, READ_BUFFER_SIZE-1, 0);
-        removefd(m_epollfd, m_sockfd);
+        // removefd(m_epollfd, m_sockfd);
 
         if( ret == 0 )
         {
@@ -71,18 +71,20 @@ void http_conn::process()
         else
         {
             std::cout<< "get content:" <<  m_read_buf << std::endl;
-            modfd(m_epollfd, m_sockfd, EPOLLOUT);
         }
+        // 开始写
+        bool write_ret = write();
+        modfd(m_epollfd, m_sockfd, EPOLLOUT);
+
     }
 }
 
 bool http_conn::write()
 {
     int ret = send(m_sockfd, m_read_buf, sizeof(m_read_buf), 0);
-    removefd(m_epollfd, m_sockfd);
     if (ret > 0)
     {
-        std::cout << "send fd=" << m_sockfd << "with "<< m_read_buf << std::endl;
+        std::cout << "send fd= " << m_sockfd << " with "<< m_read_buf << std::endl;
         modfd(m_epollfd, m_sockfd, EPOLLIN);
     }
     else
