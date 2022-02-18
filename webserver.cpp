@@ -1,5 +1,12 @@
 #include "webserver.hpp"
 
+void show_error( int connfd, const char* info )
+{
+    printf( "%s", info );
+    send( connfd, info, strlen( info ), 0 );
+    close( connfd );
+}
+
 webserver::webserver()
 {
     //http_conn类对象
@@ -84,49 +91,20 @@ void webserver::eventLoop()
                 if (!flag)
                 { continue; }
             }
+            else if (events[i].events & ( EPOLLRDHUP | EPOLLHUP | EPOLLERR ))
+            {
+                users[sockfd].close_conn();
+            }
             // 如果是读事件
-            /* TODO: 反应堆待实现 */
             else if (events[i].events & EPOLLIN)
             {
                 dealWithRead(sockfd);
             }
+            // 如果是写事件
             else if (events[i].events & EPOLLOUT)
             {
                 dealWithWrite(sockfd);
             }
-            // 如果有异常情况
-            // else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
-            // {
-            //     //服务器端关闭连接，移除对应的定时器
-            //     util_timer *timer = users_timer[sockfd].timer;
-            //     deal_timer(timer, sockfd);
-            // }
-            // else
-            // {
-            //     int sockfd = events[i].data.fd;
-            //     int n = read(sockfd, buffer, sizeof(buffer));
-            //     if (n == 0)
-            //     {
-            //         int res = epoll_ctl(m_epollfd, EPOLL_CTL_DEL, sockfd, NULL);
-            //         assert(res != -1);
-            //         close(sockfd);
-            //     }
-            //     else if (n < 0)
-            //     {
-            //         close(sockfd);
-            //         exit(1);
-            //     }
-            //     else
-            //     {
-            //         for (int j = 0; j < n; ++j)
-            //         {
-            //             buffer[j] = toupper(buffer[j]);
-            //         }
-            //         write(sockfd, buffer, n);
-            //         write(STDOUT_FILENO, buffer,n);
-            //     }
-            // }
-
         }
     }
     close(m_listenfd);
@@ -138,12 +116,18 @@ bool webserver::dealWithClientData()
     socklen_t client_addr_len = sizeof(address);
     int cfd = accept(m_listenfd, (struct sockaddr*)&address, &client_addr_len);
     assert(cfd != -1);
+    if (http_conn::m_user_count >= MAX_FD)
+    {
+        show_error( cfd, "Internal server busy" );
+        return false;
+    }
 
-    // 加入到红黑树上
+    // 将cfd加入到红黑树上
     addfd(m_epollfd, cfd, false);
 
     // 为该次连接（用户）初始化
     users[cfd].init(cfd, address);
+    return true;
 }
 
 void webserver::dealWithRead(int sockfd) /* 处理读事件 */

@@ -158,15 +158,26 @@ void threadpool<T>::run()
         /**
          * @todo 增加模型选择
          */
-
+        // 0为读事件
         if (request->m_state == 0)
         {
-            // 如果是读，调用process(模板类中的方法,这里是http类)进行处理
-            request->process();
+            if (request->read())
+            {
+                request->process();
+            }
+            else
+            {
+                request->close_conn();
+            }
         }
+        // 写事件
         else
         {
-            request->write();
+            bool ret = request->write();
+            if (!ret)
+            {
+                request->close_conn();
+            }
         }
     }
 }

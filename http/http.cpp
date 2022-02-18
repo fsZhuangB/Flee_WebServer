@@ -41,46 +41,70 @@ void modfd(int epollfd, int fd, int ev)
 
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
+HTTP_CODE http_conn::process_read()
+{
 
+}
 /**
  * @brief
- * process
+ * 该函数调用分别调用process_read和process_write完成报文解析和报文响应
  */
 void http_conn::process()
 {
-    memset( m_read_buf, '\0', READ_BUFFER_SIZE );
-    while (1)
+    HTTP_CODE read_ret = process_read();
+    // NO_REQUEST，表示请求不完整，需要继续接收请求数据
+    if (read_ret == NO_REQUEST)
     {
-        int ret = recv(m_sockfd, m_read_buf, READ_BUFFER_SIZE-1, 0);
-        // removefd(m_epollfd, m_sockfd);
+        // 重新监听读事件
+        modfd(m_epollfd, m_sockfd, EPOLLIN);
+        return ;
+    }
+    //调用process_write完成报文响应
+    bool write_ret = process_write(read_ret);
+    if (!write_ret)
+    {
+        close_conn();
+    }
+    // 重置事件为EPOLLOUT，通知文件描述符可写
+    modfd(m_epollfd, m_sockfd, EPOLLOUT);
+}
 
-        if( ret == 0 )
+bool http_conn::read()
+{
+    if( m_read_idx >= READ_BUFFER_SIZE )
+    {
+        return false;
+    }
+
+    int bytes_read = 0;
+    while( true )
+    {
+        bytes_read = recv( m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0 );
+        if ( bytes_read == -1 )
         {
-            close( m_sockfd );
-            std::cout << "foreiner closed the connection" << std::endl;
-            break;
-        }
-        else if (ret < 0)
-        {
-            if (errno == EAGAIN)
+            if( errno == EAGAIN || errno == EWOULDBLOCK )
             {
-                modfd(m_epollfd, m_sockfd, EPOLLIN);
                 break;
             }
+            return false;
         }
-        else
+        else if ( bytes_read == 0 )
         {
-            std::cout<< "get content:" <<  m_read_buf << std::endl;
+            return false;
         }
-        // 开始写
-        bool write_ret = write();
-        modfd(m_epollfd, m_sockfd, EPOLLOUT);
 
+        m_read_idx += bytes_read;
     }
+    return true;
+
 }
 
 bool http_conn::write()
 {
+    /**
+     * @todo 需要重新实现
+     * 
+     */
     int ret = send(m_sockfd, m_read_buf, sizeof(m_read_buf), 0);
     if (ret > 0)
     {
@@ -101,9 +125,26 @@ void http_conn::init(int sockfd, const sockaddr_in &addr)
 {
     m_sockfd = sockfd;
     m_address = addr;   
+    int error = 0;
+    socklen_t len = sizeof(error);
+    getsockopt(m_sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
+    int reuse = 1;
+    setsockopt( m_sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) );
     addfd(m_epollfd, sockfd, true);
+    m_user_count++;
 
-    // init();
+    init();
+}
+
+void http_conn::init()
+{
+    m_check_state = CHECK_STATE_REQUESTLINE;
+    m_method = GET;
+    m_start_line = 0;
+    m_checked_idx = 0;
+    m_read_idx = 0;
+    
+    memset( m_read_buf, '\0', READ_BUFFER_SIZE );
 }
 
 
