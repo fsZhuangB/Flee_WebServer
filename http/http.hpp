@@ -46,6 +46,7 @@ class http_conn
     //初始化连接,外部调用初始化套接字地址
     void init(int sockfd, const sockaddr_in &addr);
     void init();
+<<<<<<< HEAD
     void close_conn( bool real_close = true ); // 关闭链接
 
 
@@ -59,7 +60,8 @@ class http_conn
     HTTP_CODE do_request();
     char* get_line() { return m_read_buf + m_start_line; }
     LINE_STATUS parse_line();
-
+=======
+>>>>>>> dev
     public:
     int m_state; //读为0, 写为1
 
