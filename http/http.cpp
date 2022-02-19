@@ -1,6 +1,19 @@
 #include "http.hpp"
 
 int http_conn::m_epollfd = -1;
+int http_conn::m_user_count = 0;
+
+const char* ok_200_title = "OK";
+const char* error_400_title = "Bad Request";
+const char* error_400_form = "Your request has bad syntax or is inherently impossible to satisfy.\n";
+const char* error_403_title = "Forbidden";
+const char* error_403_form = "You do not have permission to get file from this server.\n";
+const char* error_404_title = "Not Found";
+const char* error_404_form = "The requested file was not found on this server.\n";
+const char* error_500_title = "Internal Error";
+const char* error_500_form = "There was an unusual problem serving the requested file.\n";
+const char* doc_root = "/root";
+
 //对文件描述符设置非阻塞
 int setnonblocking(int fd)
 {
@@ -37,7 +50,7 @@ void modfd(int epollfd, int fd, int ev)
 {
     epoll_event event;
     event.data.fd = fd;
-    event.events = ev | EPOLLET | EPOLLRDHUP;
+    event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
 
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
@@ -117,7 +130,8 @@ http_conn::HTTP_CODE http_conn::parse_headers(char* text)
             m_check_state = CHECK_STATE_CONTENT;
             return NO_REQUEST;
         }
-
+        std::cout << std::endl;
+        std::cout << "It's GET request" << std::endl;
         return GET_REQUEST;
     }
     else if ( strncasecmp( text, "Connection:", 11 ) == 0 )
@@ -254,7 +268,11 @@ http_conn::HTTP_CODE http_conn::parse_request_line( char* text )
     {
         return BAD_REQUEST;
     }
+    //当url为/时，根页面
+    if (strlen(m_url) == 1)
+        strcat(m_url, "test.html");
     // 转移DFA状态
+    std::cout << "go to check state header" << std::endl;
     m_check_state = CHECK_STATE_HEADER;
     return NO_REQUEST;
 }
@@ -280,6 +298,80 @@ void http_conn::process()
     }
     // 重置事件为EPOLLOUT，通知文件描述符可写
     modfd(m_epollfd, m_sockfd, EPOLLOUT);
+}
+
+/**
+ * @brief process_read函数的返回值是对请求的文件分析后的结果，
+ * 将网站根目录和url文件拼接，然后通过stat判断该文件属性
+ * 
+ * @return http_conn::HTTP_CODE 
+ */
+http_conn::HTTP_CODE http_conn::do_request()
+{
+    // 拷贝文件目录地址
+    strcpy( m_real_file, doc_root );
+    int len = strlen( doc_root );
+    //将网站目录和m_url进行拼接，更新到m_real_file中
+    strncpy( m_real_file + len, m_url, FILENAME_LEN - len - 1 );
+
+    /* 下面要对一系列的文件状态进行判断 */
+
+    int fd = open( m_real_file, O_RDONLY );
+    m_file_address = ( char* )mmap( 0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0 );
+    close( fd );
+    return FILE_REQUEST;
+}
+
+void http_conn::unmap()
+{
+    if (m_file_address)
+    {
+        munmap(m_file_address, m_file_stat.st_size);
+        m_file_address = nullptr;
+    }
+}
+
+bool http_conn::process_write( HTTP_CODE ret )
+{
+    switch (ret)
+    {
+        case FILE_REQUEST:
+        add_status_line(200, ok_200_title);
+        // 如果请求的文件大小不为0
+        if (m_file_stat.st_size != 0)
+        {
+            add_headers(m_file_stat.st_size);
+            // 第一个iovec指针指向响应报文缓冲区，长度指向m_write_idx
+            m_iv[0].iov_base = m_write_buf;
+            m_iv[0].iov_len = m_write_idx;
+
+            // 第二个iovec指针指向mmap返回的文件指针，长度指向文件大小
+            m_iv[1].iov_base = m_file_address;
+            m_iv[1].iov_len = m_file_stat.st_size;
+            m_iv_count = 2;
+            return true;
+        }
+        else
+        {
+            const char* ok_string = "<html><body></body></html>";
+            add_headers( strlen( ok_string ) );
+            if ( ! add_content( ok_string ) )
+            {
+                return false;
+            }
+
+        }
+        default:
+        {
+            return false;
+        }
+    }
+
+    // 其余状态只申请一个iovec为响应报文缓冲区
+    m_iv[ 0 ].iov_base = m_write_buf;
+    m_iv[ 0 ].iov_len = m_write_idx;
+    m_iv_count = 1;
+    return true;
 }
 
 bool http_conn::read()
@@ -314,23 +406,51 @@ bool http_conn::read()
 
 bool http_conn::write()
 {
-    /**
-     * @todo 需要重新实现
-     * 
-     */
-    int ret = send(m_sockfd, m_read_buf, sizeof(m_read_buf), 0);
-    if (ret > 0)
+    int temp = 0;
+    int have_sent = 0;
+    int to_send = m_write_idx;
+    if (to_send == 0)
     {
-        std::cout << "send fd= " << m_sockfd << " with "<< m_read_buf << std::endl;
         modfd(m_epollfd, m_sockfd, EPOLLIN);
+        init();
+        return true;
     }
-    else
+
+    while (true)
     {
-        close(m_sockfd);
-        std::cout << "send error\n" << std::endl;
-        return false;
+        temp = writev(m_sockfd, m_iv, m_iv_count);
+        // 出错
+        if (temp <= -1)
+        {
+            // 保证连接完整性
+            if (errno = EAGAIN)
+            {
+                modfd(m_epollfd, m_sockfd, EPOLLOUT);
+                return true;
+            }
+            unmap();
+            return false;
+        }
+        // 更新已经写的内容
+        to_send -= temp;
+        have_sent += temp;
+        if (to_send <= have_sent)
+        {
+            unmap();
+            if( m_linger )
+            {
+                init();
+                modfd( m_epollfd, m_sockfd, EPOLLIN );
+                return true;
+            }
+            else
+            {
+                modfd( m_epollfd, m_sockfd, EPOLLIN );
+                return false;
+            } 
+        }
+
     }
-    return true;
 }
 
 //初始化连接,外部调用初始化套接字地址
@@ -363,11 +483,15 @@ void http_conn::init()
     m_start_line = 0;
     m_checked_idx = 0;
     m_read_idx = 0;
+    m_write_idx = 0;
+    m_state = 0;
     
-    memset( m_read_buf, '\0', READ_BUFFER_SIZE );
+    memset(m_read_buf, '\0', READ_BUFFER_SIZE);
+    memset(m_write_buf, '\0', WRITE_BUFFER_SIZE);
+    memset(m_real_file, '\0', FILENAME_LEN);
 }
 
-void http_conn::close_conn( bool real_close = true )
+void http_conn::close_conn( bool real_close )
 {
     if (real_close && (m_sockfd != -1))
     {
@@ -377,3 +501,53 @@ void http_conn::close_conn( bool real_close = true )
     }
 }
 
+bool http_conn::add_response( const char* format, ... )
+{
+    if( m_write_idx >= WRITE_BUFFER_SIZE )
+    {
+        return false;
+    }
+    va_list arg_list;
+    va_start( arg_list, format );
+    int len = vsnprintf( m_write_buf + m_write_idx, WRITE_BUFFER_SIZE - 1 - m_write_idx, format, arg_list );
+    if( len >= ( WRITE_BUFFER_SIZE - 1 - m_write_idx ) )
+    {
+        return false;
+    }
+    m_write_idx += len;
+    va_end( arg_list );
+    return true;
+}
+
+bool http_conn::add_status_line( int status, const char* title )
+{
+    return add_response( "%s %d %s\r\n", "HTTP/1.1", status, title );
+}
+
+bool http_conn::add_headers( int content_len )
+{
+    add_content_length( content_len );
+    add_linger();
+    add_blank_line();
+}
+
+
+bool http_conn::add_content_length( int content_len )
+{
+    return add_response( "Content-Length: %d\r\n", content_len );
+}
+
+bool http_conn::add_linger()
+{
+    return add_response( "Connection: %s\r\n", ( m_linger == true ) ? "keep-alive" : "close" );
+}
+
+bool http_conn::add_blank_line()
+{
+    return add_response( "%s", "\r\n" );
+}
+
+bool http_conn::add_content( const char* content )
+{
+    return add_response( "%s", content );
+}

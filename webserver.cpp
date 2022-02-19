@@ -123,7 +123,7 @@ bool webserver::dealWithClientData()
     }
 
     // 将cfd加入到红黑树上
-    addfd(m_epollfd, cfd, false);
+    addfd(m_epollfd, cfd, true);
 
     // 为该次连接（用户）初始化
     users[cfd].init(cfd, address);
