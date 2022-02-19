@@ -30,7 +30,7 @@ class http_conn
     //初始化连接,外部调用初始化套接字地址
     void init(int sockfd, const sockaddr_in &addr);
     void init();
-
+    
     public:
     int m_state; //读为0, 写为1
 
