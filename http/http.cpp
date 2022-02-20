@@ -12,7 +12,7 @@ const char* error_404_title = "Not Found";
 const char* error_404_form = "The requested file was not found on this server.\n";
 const char* error_500_title = "Internal Error";
 const char* error_500_form = "There was an unusual problem serving the requested file.\n";
-const char* doc_root = "/root";
+const char* doc_root = "./root";
 
 //对文件描述符设置非阻塞
 int setnonblocking(int fd)
@@ -89,6 +89,7 @@ http_conn::HTTP_CODE http_conn::process_read()
                 }
                 else if ( ret == GET_REQUEST )
                 {
+                    std::cout << "go to do_request\n";
                     return do_request();
                 }
                 break;
@@ -313,6 +314,22 @@ http_conn::HTTP_CODE http_conn::do_request()
     int len = strlen( doc_root );
     //将网站目录和m_url进行拼接，更新到m_real_file中
     strncpy( m_real_file + len, m_url, FILENAME_LEN - len - 1 );
+    printf("Now m_read_file is %s\n", m_real_file);
+    if ( stat( m_real_file, &m_file_stat ) < 0 )
+    {
+        return NO_RESOURCE;
+    }
+
+    if ( ! ( m_file_stat.st_mode & S_IROTH ) )
+    {
+        return FORBIDDEN_REQUEST;
+    }
+
+    if ( S_ISDIR( m_file_stat.st_mode ) )
+    {
+        return BAD_REQUEST;
+    }
+
 
     /* 下面要对一系列的文件状态进行判断 */
 
@@ -336,10 +353,12 @@ bool http_conn::process_write( HTTP_CODE ret )
     switch (ret)
     {
         case FILE_REQUEST:
+        std::cout << "It's file requests\n";
         add_status_line(200, ok_200_title);
         // 如果请求的文件大小不为0
         if (m_file_stat.st_size != 0)
         {
+            std::cout << "st.size is " << m_file_stat.st_size << std::endl;
             add_headers(m_file_stat.st_size);
             // 第一个iovec指针指向响应报文缓冲区，长度指向m_write_idx
             m_iv[0].iov_base = m_write_buf;
@@ -359,7 +378,6 @@ bool http_conn::process_write( HTTP_CODE ret )
             {
                 return false;
             }
-
         }
         default:
         {

@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <sys/mman.h>
 #include <sys/uio.h>
+#include <sys/stat.h>
 #include <stdarg.h>
 #include <string.h>
 #include <iostream>
