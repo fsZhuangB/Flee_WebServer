@@ -425,6 +425,8 @@ bool http_conn::process_write( HTTP_CODE ret )
             m_iv[1].iov_base = m_file_address;
             m_iv[1].iov_len = m_file_stat.st_size;
             m_iv_count = 2;
+            // 请求头大小 + 文件大小
+            bytes_to_send = m_write_idx + m_file_stat.st_size;
             return true;
         }
         else
@@ -446,6 +448,8 @@ bool http_conn::process_write( HTTP_CODE ret )
     m_iv[ 0 ].iov_base = m_write_buf;
     m_iv[ 0 ].iov_len = m_write_idx;
     m_iv_count = 1;
+    // 只需要写返回头文件即可
+    bytes_to_send = m_write_idx;
     return true;
 }
 
@@ -479,18 +483,30 @@ bool http_conn::read()
 
 }
 
+/**
+ * @brief 调用http_conn::write函数将响应报文发送给浏览器端
+ * 
+ * @return true 
+ * @return false 
+ */
 bool http_conn::write()
 {
+    // writev发送长度
     int temp = 0;
+
+    // 已经发送长度
     int have_sent = 0;
     int to_send = m_write_idx;
-    if (to_send == 0)
+
+    // 如果没有要发送的，则重新监听读事件
+    if (bytes_to_send == 0)
     {
         modfd(m_epollfd, m_sockfd, EPOLLIN);
         init();
         return true;
     }
 
+    // 循环调用writev函数发送数据
     while (true)
     {
         temp = writev(m_sockfd, m_iv, m_iv_count);
@@ -507,10 +523,26 @@ bool http_conn::write()
             return false;
         }
         // 更新已经写的内容
-        to_send -= temp;
-        have_sent += temp;
-        if (to_send <= have_sent)
+        bytes_to_send -= temp;
+        bytes_have_send += temp;
+
+        // 第一次传输后，需要更新m_iv[1].iov_base和iov_len，m_iv[0].iov_len置成0，只传输文件，不用传输响应消息头
+        if (bytes_have_send >= m_iv[0].iov_len)
         {
+            m_iv[0].iov_len = 0; // 不再发送请求头
+            m_iv[1].iov_base = m_file_address + (bytes_have_send - m_write_idx);
+            m_iv[1].iov_len = bytes_to_send;
+        }
+        else
+        {
+            // 更新文件偏移位置
+            m_iv[0].iov_base = m_write_buf + bytes_have_send;
+            m_iv[0].iov_len = m_iv[0].iov_len - bytes_have_send;
+        }
+        // 如果发送已经成功，则根据是否长连接来决定是否立即关闭套接字
+        if (bytes_to_send <= 0)
+        {
+            // 取消文件映射
             unmap();
             if( m_linger )
             {
@@ -560,6 +592,9 @@ void http_conn::init()
     m_read_idx = 0;
     m_write_idx = 0;
     m_state = 0;
+
+    bytes_to_send = 0;
+    bytes_have_send = 0;
     
     memset(m_read_buf, '\0', READ_BUFFER_SIZE);
     memset(m_write_buf, '\0', WRITE_BUFFER_SIZE);
