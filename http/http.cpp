@@ -242,6 +242,11 @@ http_conn::HTTP_CODE http_conn::parse_request_line( char* text )
     {
         m_method = GET;
     }
+    else if (strcasecmp(method, "POST") == 0)
+    {
+        m_method = POST;
+        // cgi = 1;
+    }
     else
     {
         return BAD_REQUEST;
@@ -271,7 +276,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line( char* text )
     }
     //当url为/时，根页面
     if (strlen(m_url) == 1)
-        strcat(m_url, "test.html");
+        strcat(m_url, "welcome.html");
     // 转移DFA状态
     std::cout << "go to check state header" << std::endl;
     m_check_state = CHECK_STATE_HEADER;
@@ -312,9 +317,62 @@ http_conn::HTTP_CODE http_conn::do_request()
     // 拷贝文件目录地址
     strcpy( m_real_file, doc_root );
     int len = strlen( doc_root );
-    //将网站目录和m_url进行拼接，更新到m_real_file中
-    strncpy( m_real_file + len, m_url, FILENAME_LEN - len - 1 );
+    const char* p = strrchr(m_url, '/');
+    std::cout << m_url << std::endl;
+
+    std::cout << *(p+1) << std::endl;
+    // 处理登陆（CGI验证）
+
+    // 处理登陆页面
+    if (*(p+1) == '0')
+    {
+        char *m_url_real = (char *)malloc(sizeof(char) * 200);
+        strcpy(m_url_real, "/register.html");
+        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
+
+        free(m_url_real);
+    }
+    else if (*(p+1) == '1')
+    {
+        char *m_url_real = (char *)malloc(sizeof(char) * 200);
+        strcpy(m_url_real, "/log.html");
+        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
+
+        free(m_url_real);
+    }
+    else if (*(p + 1) == '5')
+    {
+        printf("*****************\n");
+        printf("Now check picture.html\n");
+        printf("*****************\n");
+
+        char *m_url_real = (char *)malloc(sizeof(char) * 200);
+        strcpy(m_url_real, "/picture.html");
+        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
+
+        free(m_url_real);
+    }
+    else if (*(p + 1) == '6')
+    {
+        char *m_url_real = (char *)malloc(sizeof(char) * 200);
+        strcpy(m_url_real, "/video.html");
+        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
+
+        free(m_url_real);
+    }
+    else if (*(p + 1) == '7')
+    {
+        char *m_url_real = (char *)malloc(sizeof(char) * 200);
+        strcpy(m_url_real, "/fans.html");
+        strncpy(m_real_file + len, m_url_real, strlen(m_url_real));
+
+        free(m_url_real);
+    }
+    else
+        //将网站目录和m_url进行拼接，更新到m_real_file中
+        strncpy( m_real_file + len, m_url, FILENAME_LEN - len - 1 );
     printf("Now m_read_file is %s\n", m_real_file);
+
     if ( stat( m_real_file, &m_file_stat ) < 0 )
     {
         return NO_RESOURCE;
@@ -329,7 +387,6 @@ http_conn::HTTP_CODE http_conn::do_request()
     {
         return BAD_REQUEST;
     }
-
 
     /* 下面要对一系列的文件状态进行判断 */
 

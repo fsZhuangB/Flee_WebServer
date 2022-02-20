@@ -73,7 +73,7 @@ class http_conn
     int m_checked_idx;
     int m_start_line;
     char m_write_buf[ WRITE_BUFFER_SIZE ];
-    int m_write_idx;
+    int m_write_idx; // 要写回到客户端的长度
 
     char m_real_file[ FILENAME_LEN ];
     char* m_url;
