@@ -13,48 +13,55 @@
 
 using namespace std;
 
-class connection_pool
+/**
+ * @brief 懒汉单例模式
+ * 
+ */
+class connectionPool
 {
-public:
-	MYSQL *GetConnection();				 //获取数据库连接
-	bool ReleaseConnection(MYSQL *conn); //释放连接
-	int GetFreeConn();					 //获取连接
-	void DestroyPool();					 //销毁所有连接
+    public:
+    MYSQL* getConnection(); // 获取数据库连接
+    bool releaseConnection(MYSQL*); // 释放数据库连接
+    void destroyPool(); // 销毁连接池
 
-	//单例模式
-	static connection_pool *GetInstance();
+    void init(string user, string passwd, string url, string databaseName, int port, int maxConnection);
 
-	void init(string url, string User, string PassWord, string DataBaseName, int Port, int MaxConn, int close_log); 
+    public:
+    string url;			 //主机地址
+	string port;		 //数据库端口号
+	string user;		 //登陆数据库用户名
+	string passwd;	 //登陆数据库密码
+	string databaseName; //使用数据库名
+	int closeLog;	//日志开关
 
-private:
-	connection_pool();
-	~connection_pool();
+    public:
+    static connectionPool* getInstance();
 
-	int m_MaxConn;  //最大连接数
-	int m_CurConn;  //当前已使用的连接数
-	int m_FreeConn; //当前空闲的连接数
-	locker lock;
-	list<MYSQL *> connList; //连接池
-	sem reserve;
+    private:
+    int maxConn; // 最大连接数目
+	int curConn;  //当前已使用的连接数
+	int FreeConn; //当前空闲的连接数
+    locker lock;
+    sem haveFree; // 阻塞在是否有剩余空闲连接上
+    list<MYSQL*> connList;
 
-public:
-	string m_url;			 //主机地址
-	string m_Port;		 //数据库端口号
-	string m_User;		 //登陆数据库用户名
-	string m_PassWord;	 //登陆数据库密码
-	string m_DatabaseName; //使用数据库名
-	int m_close_log;	//日志开关
+    private:
+    connectionPool();
+    ~connectionPool();
+    connectionPool(const connectionPool&) = delete;
+    connectionPool& operator=(const connectionPool&) = delete;
+    
 };
 
-class connectionRAII{
+class connRAII
+{
+    public:
+    connRAII(MYSQL **con, connectionPool *connPool);
+	~connRAII();
 
-public:
-	connectionRAII(MYSQL **con, connection_pool *connPool);
-	~connectionRAII();
-	
-private:
-	MYSQL *conRAII;
-	connection_pool *poolRAII;
+    private:
+	MYSQL *connRAII;
+	connectionPool *poolRAII;
 };
 
 #endif
