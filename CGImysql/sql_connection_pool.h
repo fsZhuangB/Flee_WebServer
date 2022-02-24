@@ -40,7 +40,7 @@ class connectionPool
     private:
     int maxConn; // 最大连接数目
 	int curConn;  //当前已使用的连接数
-	int FreeConn; //当前空闲的连接数
+	int freeConn; //当前空闲的连接数
     locker lock;
     sem haveFree; // 阻塞在是否有剩余空闲连接上
     list<MYSQL*> connList;

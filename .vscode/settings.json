@@ -63,6 +63,7 @@
         "vector": "cpp",
         "*.tcc": "cpp",
         "fstream": "cpp",
-        "numeric": "cpp"
+        "numeric": "cpp",
+        "deque": "cpp"
     }
 }
