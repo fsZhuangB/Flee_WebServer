@@ -21,12 +21,30 @@ webserver::~webserver()
     delete m_pool;
 }
 
-void webserver::init(int port)
+void webserver::init(int port, std::string user, std::string passwd, std::string dbName, int sqlNum, int threadNum)
 {
     m_port = port;
+    user = user;
+    passwd = passwd;
+    dbName = dbName;
+    sqlNum = sqlNum;
+    m_thread_num = threadNum;
 }
 
-void webserver::thread_pool()
+/**
+ * @brief 初始化connection pool对象
+ * 
+ */
+void webserver::connPoolInit()
+{
+    connPool = connectionPool::getInstance();
+    connPool->init(user, passwd, "localhost", dbName, 3306, sqlNum);
+
+    // http对象初始化数据库表
+    users->initSqlConn(connPool);
+}
+
+void webserver::threadPool()
 {
     // 初始化线程池
     m_pool = new threadpool<http_conn>();

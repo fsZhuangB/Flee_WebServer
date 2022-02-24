@@ -6,13 +6,19 @@
 #include <list>
 #include <pthread.h>
 #include <iostream>
-#include "sql_connection_pool.h"
+#include "connectionPool.h"
 
 connectionPool* connectionPool::getInstance()
 {
 	// 线程安全定义方式
 	static connection_pool connPool;
 	return &connPool;
+}
+
+connectionPool::connectionPool()
+{
+	curConn = 0;  //当前已使用的连接数
+	freeConn = 0; //当前空闲的连接数
 }
 
 void connectionPool::init(string user, string passwd, string url, string databaseName, int port, int maxConnection)
@@ -102,7 +108,7 @@ connRAII::connRAII(MYSQL **con, connectionPool *connPool)
 {
 	*con = connPool->getConnection();
 
-	connRAII = *con;
+	mysqlConn = *con;
 	poolRAII = connPool;
 }
 

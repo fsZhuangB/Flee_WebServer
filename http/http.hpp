@@ -13,8 +13,11 @@
 #include <stdarg.h>
 #include <string.h>
 #include <iostream>
+#include <map>
+#include <string>
 
 #include "../lock/locker.h"
+#include "../CGImysql/connectionPool.h"
 
 int setnonblocking(int fd);
 void addfd(int epollfd, int fd, bool one_shot);
@@ -38,6 +41,8 @@ class http_conn
     bool read(); /* 工作线程用来读的函数 */
     void init(int sockfd, const sockaddr_in &addr); /* 初始化连接,外部调用初始化套接字地址 */
     void close_conn( bool real_close = true ); /* 关闭链接 */
+
+    void initSqlConn(connectionPool* con); /* 初始化数据库连接对象 */
 
     private:
     void init(); /* 内部私有变量初始化函数 */
@@ -91,6 +96,15 @@ class http_conn
     struct stat m_file_stat;
     struct iovec m_iv[2]; /* 向量数组 */
     int m_iv_count;
+
+    /* 数据库相关 */
+    int cgi; // 校验
+    char* m_string; // 储存请求头数据
+    map<string, string> m_users;
+    char sql_user[100];
+    char sql_passwd[100];
+    char sql_name[100];
+
 
     public:
     static int m_epollfd;

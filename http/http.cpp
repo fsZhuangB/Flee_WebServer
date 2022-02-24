@@ -14,6 +14,9 @@ const char* error_500_title = "Internal Error";
 const char* error_500_form = "There was an unusual problem serving the requested file.\n";
 const char* doc_root = "./root";
 
+locker m_lock;
+map<string, string> users;
+
 //对文件描述符设置非阻塞
 int setnonblocking(int fd)
 {
@@ -54,6 +57,38 @@ void modfd(int epollfd, int fd, int ev)
 
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
+
+void http_conn::initSqlConn(connectionPool* con)
+{
+    // 利用mysql RAII初始化mysql对象
+    MYSQL* mysql = nullptr;
+    connRAII mysqlCon(&mysql, con);
+
+    //在user表中检索username，passwd数据，浏览器端输入
+    if (mysql_query(mysql, "SELECT username,passwd FROM user"))
+    {
+        printf("SELECT error:%s\n", mysql_error(mysql));
+    }
+    MYSQL_RES* res = mysql_store_result(mysql);
+
+    //从表中检索完整的结果集
+    MYSQL_RES *result = mysql_store_result(mysql);
+
+    //返回结果集中的列数
+    int num_fields = mysql_num_fields(result);
+
+    //返回所有字段结构的数组
+    MYSQL_FIELD *fields = mysql_fetch_fields(result);
+    MYSQL_ROW row;
+    // 将姓名和密码load到本地内存的map中
+    while ((row = mysql_fetch_row(result)))
+    {
+        string tempUser = row[0];
+        string tempPassWd = row[1];
+        users[tempUser] = tempPassWd;
+    }
+}
+
 http_conn::HTTP_CODE http_conn::process_read()
 {
     LINE_STATUS line_status = LINE_OK;
@@ -318,9 +353,9 @@ http_conn::HTTP_CODE http_conn::do_request()
     strcpy( m_real_file, doc_root );
     int len = strlen( doc_root );
     const char* p = strrchr(m_url, '/');
-    std::cout << m_url << std::endl;
+    // std::cout << m_url << std::endl;
 
-    std::cout << *(p+1) << std::endl;
+    // std::cout << *(p+1) << std::endl;
     // 处理登陆（CGI验证）
 
     // 处理登陆页面

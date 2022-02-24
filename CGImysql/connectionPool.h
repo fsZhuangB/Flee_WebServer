@@ -1,5 +1,5 @@
-#ifndef _CONNECTION_POOL_
-#define _CONNECTION_POOL_
+#ifndef _CONNECTIONPOOL_
+#define _CONNECTIONPOOL_
 
 #include <stdio.h>
 #include <list>
@@ -9,7 +9,7 @@
 #include <iostream>
 #include <string>
 #include "../lock/locker.h"
-#include "../log/log.h"
+//#include "../log/log.h"
 
 using namespace std;
 
@@ -50,7 +50,6 @@ class connectionPool
     ~connectionPool();
     connectionPool(const connectionPool&) = delete;
     connectionPool& operator=(const connectionPool&) = delete;
-    
 };
 
 class connRAII
@@ -60,7 +59,7 @@ class connRAII
 	~connRAII();
 
     private:
-	MYSQL *connRAII;
+	MYSQL *mysqlConn;
 	connectionPool *poolRAII;
 };
 

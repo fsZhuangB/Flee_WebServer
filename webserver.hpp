@@ -13,7 +13,9 @@
 #include <sys/epoll.h>
 #include <strings.h>
 #include <ctype.h>
+#include <string>
 
+#include "CGImysql/connectionPool.h"
 #include "threadpool/mythreadpool.hpp"
 #include "http/http.hpp"
 
@@ -32,6 +34,11 @@ public:
     http_conn *users; /* http连接数组指针 */
 
     // 数据库相关
+    std::string user;
+    std::string passwd;
+    std::string dbName;
+    connectionPool* connPool;  // 线程池对象
+    int sqlNum;
 
     // 线程池相关
     threadpool<http_conn>* m_pool;
@@ -46,13 +53,14 @@ public:
 public:
     webserver();
     ~webserver();
-    void init(int port);
+    void init(int port, std::string user, std::string passwd, std::string dbName, int sqlNum, int threadNum);
     void eventLoop();   /* epoll 主要循环 */
     void eventListen(); /* 处理监听事件 */
     void dealWithRead(int sockfd); /* 处理读事件 */
     void dealWithWrite(int sockfd); /* 处理写事件 */
     bool dealWithClientData(); /* 处理监听事件 */
-    void thread_pool();        /* 线程池 */
+    void threadPool();        /* 线程池 */
+    void connPoolInit(); /* 数据库连接池 */
 };
 
 #endif
