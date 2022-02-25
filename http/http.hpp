@@ -104,7 +104,7 @@ class http_conn
     char sql_user[100];
     char sql_passwd[100];
     char sql_name[100];
-
+    MYSQL* mysql;
 
     public:
     static int m_epollfd;
