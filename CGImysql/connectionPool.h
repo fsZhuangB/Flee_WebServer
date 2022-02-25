@@ -28,7 +28,7 @@ class connectionPool
 
     public:
     string url;			 //主机地址
-	string port;		 //数据库端口号
+	int port;		 //数据库端口号
 	string user;		 //登陆数据库用户名
 	string passwd;	 //登陆数据库密码
 	string databaseName; //使用数据库名

@@ -64,6 +64,11 @@
         "*.tcc": "cpp",
         "fstream": "cpp",
         "numeric": "cpp",
-        "deque": "cpp"
+        "deque": "cpp",
+        "clocale": "cpp",
+        "map": "cpp",
+        "memory_resource": "cpp",
+        "random": "cpp",
+        "cinttypes": "cpp"
     }
 }

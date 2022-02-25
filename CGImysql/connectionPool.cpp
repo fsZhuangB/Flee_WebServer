@@ -8,54 +8,59 @@
 #include <iostream>
 #include "connectionPool.h"
 
-connectionPool* connectionPool::getInstance()
+connectionPool *connectionPool::getInstance()
 {
-	// 线程安全定义方式
-	static connection_pool connPool;
-	return &connPool;
+    // 线程安全定义方式
+    static connectionPool connPool;
+    return &connPool;
 }
 
 connectionPool::connectionPool()
 {
-	curConn = 0;  //当前已使用的连接数
-	freeConn = 0; //当前空闲的连接数
+    curConn = 0;  //当前已使用的连接数
+    freeConn = 0; //当前空闲的连接数
 }
 
-void connectionPool::init(string user, string passwd, string url, string databaseName, int port, int maxConnection)
+void connectionPool::init(string usr, string pwd, string dbUrl, string dbN, int dbPort, int maxConnection)
 {
-	user = user;
-	passwd = passwd;
-	url = url;
-	port = port;
-	databaseName = databaseName;
+    user = usr;
+    passwd = pwd;
+    url = dbUrl;
+    port = dbPort;
+    databaseName = dbN;
+    maxConn = maxConnection;
 
-	for (int i = 0; i < maxConnection; ++i)
-	{
-		MYSQL *con = nullptr;
-		con = mysql_init(con);
-		if (con == nullptr)
-		{
-			std::cout << "MySQL INIT Error" << std::endl;
-			exit(1);
-		}
-		con = mysql_real_connect(con, url.c_str(), user.c_str(), passwd.c_str(), databaseName.c_str(), port, NULL, 0);
-		if (con == NULL)
-		{
-			std::cout << "MySQL CONNECT Error" << std::endl;
-			exit(1);
-		}
-		connList.push_back(con);
-		++freeConn;
-	}
-	// 初始化信号量为最大free connect数目
-	haveFree = sem(freeConn);
-	maxConn = freeConn;
+    for (int i = 0; i < maxConnection; ++i)
+    {
+        MYSQL *con = nullptr;
+        con = mysql_init(con);
+        if (con == nullptr)
+        {
+            std::cout << "MySQL INIT Error" << std::endl;
+            exit(1);
+        }
+        con = mysql_real_connect(con, url.c_str(), user.c_str(), passwd.c_str(), databaseName.c_str(), port, NULL, 0);
+        if (con == NULL)
+        {
+            std::cout << "MySQL CONNECT Error" << std::endl;
+            exit(1);
+        }
+        connList.push_back(con);
+        ++freeConn;
+    }
+    // 初始化信号量为最大free connect数目
+    haveFree = sem(freeConn);
+    maxConn = freeConn;
+    std::cout << "MySQL INIT SUCCESSFULLY" << std::endl;
 }
 
-MYSQL* connectionPool::getConnection() {
+MYSQL *connectionPool::getConnection()
+{
     if (connList.size() == 0)
-    { return nullptr; }
-    MYSQL* con = nullptr;
+    {
+        return nullptr;
+    }
+    MYSQL *con = nullptr;
     haveFree.V();
     lock.lock();
     con = connList.front();
@@ -67,9 +72,12 @@ MYSQL* connectionPool::getConnection() {
     return con;
 }
 
-bool connectionPool::releaseConnection(MYSQL *con) {
+bool connectionPool::releaseConnection(MYSQL *con)
+{
     if (con == nullptr)
-    { return false; }
+    {
+        return false;
+    }
     // 放回线程池
     lock.lock();
     connList.push_back(con);
@@ -82,7 +90,8 @@ bool connectionPool::releaseConnection(MYSQL *con) {
 }
 
 // 销毁连接池
-void connectionPool::destroyPool() {
+void connectionPool::destroyPool()
+{
     lock.lock();
     if (connList.size() > 0)
     {
@@ -92,8 +101,8 @@ void connectionPool::destroyPool() {
             MYSQL *con = *it;
             mysql_close(con);
         }
-        m_CurConn = 0;
-        m_FreeConn = 0;
+        curConn = 0;
+        freeConn = 0;
         connList.clear();
     }
     lock.unlock();
@@ -106,13 +115,13 @@ connectionPool::~connectionPool()
 
 connRAII::connRAII(MYSQL **con, connectionPool *connPool)
 {
-	*con = connPool->getConnection();
+    *con = connPool->getConnection();
 
-	mysqlConn = *con;
-	poolRAII = connPool;
+    mysqlConn = *con;
+    poolRAII = connPool;
 }
 
 connRAII::~connRAII()
 {
-	connRAII->releaseConnection(connRAII);
+    poolRAII->releaseConnection(mysqlConn);
 }
