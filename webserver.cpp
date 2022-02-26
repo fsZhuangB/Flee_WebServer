@@ -48,7 +48,7 @@ void webserver::connPoolInit()
 void webserver::threadPool()
 {
     // 初始化线程池
-    m_pool = new threadpool<http_conn>();
+    m_pool = new threadpool<http_conn>(connPool);
 }
 
 void webserver::eventListen()

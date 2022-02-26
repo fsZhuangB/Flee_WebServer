@@ -69,6 +69,7 @@ class http_conn
 
     public:
     int m_state; //读为0, 写为1
+    MYSQL* mysql;
 
     private:
     int m_sockfd;
@@ -104,7 +105,6 @@ class http_conn
     char sql_user[100];
     char sql_passwd[100];
     char sql_name[100];
-    MYSQL* mysql;
 
     public:
     static int m_epollfd;

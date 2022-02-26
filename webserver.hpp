@@ -15,7 +15,6 @@
 #include <ctype.h>
 #include <string>
 
-#include "CGImysql/connectionPool.h"
 #include "threadpool/mythreadpool.hpp"
 #include "http/http.hpp"
 

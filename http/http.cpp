@@ -63,16 +63,16 @@ void modfd(int epollfd, int fd, int ev)
 void http_conn::initSqlConn(connectionPool *con)
 {
     // 利用mysql RAII初始化mysql对象
-    MYSQL *mysql = nullptr;
-    connRAII mysqlCon(&mysql, con);
+    MYSQL* sql = nullptr;
+    connRAII mysqlCon(&sql, con);
 
     //在user表中检索username，passwd数据，浏览器端输入
-    if (mysql_query(mysql, "SELECT username,passwd FROM user"))
+    if (mysql_query(sql, "SELECT username,passwd FROM user"))
     {
-        printf("SELECT error:%s\n", mysql_error(mysql));
+        printf("SELECT error:%s\n", mysql_error(sql));
     }
     //从表中检索完整的结果集
-    MYSQL_RES *result = mysql_store_result(mysql);
+    MYSQL_RES *result = mysql_store_result(sql);
 
     //返回结果集中的列数
     int num_fields = mysql_num_fields(result);

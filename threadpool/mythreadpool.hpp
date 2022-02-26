@@ -6,12 +6,13 @@
 #include <exception>
 #include <pthread.h>
 #include "../lock/locker.h"
+#include "../CGImysql/connectionPool.h"
 
 template <typename T>
 class threadpool
 {
     public:
-    threadpool(int thread_number = 8, int max_request = 10000);
+    threadpool(connectionPool* connPool, int thread_number = 8, int max_request = 10000);
     ~threadpool();
     // 向请求队列中插入任务请求
     bool append(T *request, int state);
@@ -29,12 +30,13 @@ class threadpool
     std::list<T*> m_workqueue;  //请求队列
     locker m_queuelocker;       //请求队列互斥锁
     sem m_queuestat;            //信号量，用来通知是否有任务需要处理
-    // connection_pool *m_connPool;//数据库
+    connectionPool *m_connPool;//数据库
     int m_actor_model;          //模型切换
 };
 
+// initial
 template <typename T>
-threadpool<T>::threadpool(int thread_number, int max_request) : m_thread_number(thread_number), m_max_requests(max_request){
+threadpool<T>::threadpool(connectionPool* connPool, int thread_number, int max_request) : m_connPool(connPool), m_thread_number(thread_number), m_max_requests(max_request){
     if (thread_number <= 0 || max_request <= 0)
     {
         throw std::exception();
@@ -163,6 +165,7 @@ void threadpool<T>::run()
         {
             if (request->read())
             {
+                connRAII mysqlcon(&request->mysql, m_connPool);
                 request->process();
             }
             else
