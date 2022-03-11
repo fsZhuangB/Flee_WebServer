@@ -12,8 +12,13 @@ Flee WebServer是一个高性能webserver，使用epoll实现IO多路复用，ET
 - [x] 完成初步压力测试
 - [x] 实现注册登陆功能
 - [x] 增加请求视频文件的页面
-- [ ] 实现长连接并测试
+- [ ] 为线程池增加动态扩容机制
 - [ ] 使用优雅关闭连接
 - [ ] 实现同步/异步日志系统
 - [ ] 实现定时器处理非活动连接
 
+## 项目总结
+
+1.   [线程池设计总结](https://github.com/fsZhuangB/Flee_WebServer/blob/main/%E7%BA%BF%E7%A8%8B%E6%B1%A0%E8%AE%BE%E8%AE%A1.md)
+
+2.   [并发模型总结](https://github.com/fsZhuangB/Flee_WebServer/blob/main/%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93.md)
