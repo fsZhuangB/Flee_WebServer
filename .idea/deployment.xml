@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false" showNewOnTargetInSync="false">
+    <serverData>
+      <paths name="Remote Host (1a9d6c7d-c928-41d5-8723-dec1ad410a02)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/ubuntu/RemoteWorking/Flee_WebServer" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
